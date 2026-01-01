@@ -30,6 +30,7 @@ async function run() {
         await client.connect();
 
         const jobsCollection = client.db('worklyDB').collection('jobs');
+        const applicationsCollection = client.db('worklyDB').collection('applications');
 
         // jobs api
         app.get('/jobs', async (req, res) => {
@@ -46,6 +47,23 @@ async function run() {
         });
 
 
+
+        // applications api
+
+        app.get('/applications', async (req, res) => {
+            const email = req.query.email;
+            // filter applications in db by email
+            const query = { applicant: email };
+            const result = await applicationsCollection.find(query).toArray();
+            res.send(result)
+        })
+
+        app.post('/applications', async (req, res) => {
+            const application = req.body;
+            // console.log(application);
+            const result = await applicationsCollection.insertOne(application);
+            res.send(result);
+        });
 
 
 
