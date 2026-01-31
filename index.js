@@ -39,12 +39,29 @@ async function run() {
             res.send(result);
         });
 
+        // jobs by email
+        // app.get('/jobsEmailAddress', async (req, res) => {
+        //     const email = req.query.email;
+        //     const query = { postedBy: email };
+        //     const cursor = jobsCollection.find(query);
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // });
+
         app.get('/jobs/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const job = await jobsCollection.findOne(query);
             res.send(job);
         });
+
+
+        app.post('/jobs', async (req, res) => {
+            const job = req.body;
+            console.log(job);
+            const result = await jobsCollection.insertOne(job);
+            res.send(result);
+        })
 
 
 
