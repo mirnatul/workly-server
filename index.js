@@ -56,6 +56,20 @@ async function run() {
         //     res.send(result);
         // });
 
+        app.get('/jobs/applications', async (req, res) => {
+            const email = req.query.email;
+            const query = { hr_email: email };
+            const jobs = await jobsCollection.find(query).toArray();
+
+            // should use aggregate to have optimum data fetching
+            for (const job of jobs) {
+                const applicationQuery = { jobId: job._id.toString() };
+                const applications_count = await applicationsCollection.countDocuments(applicationQuery);
+                job.applications_count = applications_count;
+            }
+            res.send(jobs);
+        });
+
         app.get('/jobs/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
@@ -70,6 +84,8 @@ async function run() {
             const result = await jobsCollection.insertOne(job);
             res.send(result);
         })
+
+
 
 
 
