@@ -34,7 +34,15 @@ async function run() {
 
         // jobs api
         app.get('/jobs', async (req, res) => {
-            const cursor = jobsCollection.find();
+
+            // if email found in query
+            const email = req.query.email;
+            const query = {};
+            if (email) {
+                query.hr_email = email;
+            }
+
+            const cursor = jobsCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
         });
@@ -68,6 +76,7 @@ async function run() {
         // applications api
 
         app.get('/applications', async (req, res) => {
+            // console.log("hit the api");
             const email = req.query.email;
             // filter applications in db by email
             const query = { applicant: email };
@@ -75,10 +84,32 @@ async function run() {
             res.send(result)
         })
 
+        // app.get('/applications/:id', async (req, res) => {
+
+        // });
+        app.get('/applications/job/:job_id', async (req, res) => {
+            const job_id = req.params.job_id;
+            const query = { jobId: job_id };
+            result = await applicationsCollection.find(query).toArray();
+            res.send(result);
+        });
+
         app.post('/applications', async (req, res) => {
             const application = req.body;
             // console.log(application);
             const result = await applicationsCollection.insertOne(application);
+            res.send(result);
+        });
+
+        app.patch('/applications/:id', async (req, res) => {
+            // const updated = req.body;
+            const filter = { _id: new ObjectId(req.params.id) };
+            const updatedDoc = {
+                $set: {
+                    status: req.body.status
+                }
+            }
+            const result = await applicationsCollection.updateOne(filter, updatedDoc);
             res.send(result);
         });
 
