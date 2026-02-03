@@ -2,14 +2,51 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
+
+// jwt
+const jwt = require('jsonwebtoken');
+// cookie parser
+const cookieParser = require('cookie-parser');
+
 const port = process.env.PORT || 3000;
 
 require('dotenv').config();
 
 // middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173'], // allow requests from this origin
+    credentials: true, // allow cookies to be sent
+}));
 app.use(express.json());
+app.use(cookieParser());
 
+
+const logger = (req, res, next) => {
+    console.log('inside the logger middleware');
+    next();
+}
+
+// const verifyToken = (req, res, next) => {
+//     // we need cookies here
+//     const token = req?.cookies?.token;
+
+//     // check if token exists
+//     if (!token) {
+//         return res.status(401).send({ message: 'unauthorized access' });
+//     }
+
+//     // verify token
+//     jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+//         if (err) {
+//             return res.status(403).send({ message: 'forbidden access' });
+//         }
+//         console.log(decoded);
+//         // req.decoded = decoded;
+//     })
+
+
+//     next();
+// }
 
 
 
@@ -31,6 +68,23 @@ async function run() {
 
         const jobsCollection = client.db('worklyDB').collection('jobs');
         const applicationsCollection = client.db('worklyDB').collection('applications');
+
+
+        // jwt
+        app.post('/jwt', async (req, res) => {
+            const userData = req.body;
+            const token = jwt.sign(userData, process.env.JWT_ACCESS_SECRET, { expiresIn: '1d' });
+
+            // set token in httpOnly cookie
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: false, // set to true if using https
+            }); // add options as needed
+
+            // when using local storage in we pass the token in response body but in cookies we set the token in cookie
+            res.send({ succes: true });
+        });
+
 
         // jobs api
         app.get('/jobs', async (req, res) => {
@@ -58,6 +112,7 @@ async function run() {
 
         app.get('/jobs/applications', async (req, res) => {
             const email = req.query.email;
+
             const query = { hr_email: email };
             const jobs = await jobsCollection.find(query).toArray();
 
@@ -91,9 +146,12 @@ async function run() {
 
         // applications api
 
-        app.get('/applications', async (req, res) => {
+        app.get('/applications', logger, async (req, res) => {
             // console.log("hit the api");
             const email = req.query.email;
+
+            // console.log('inside applications', req.cookies);
+
             // filter applications in db by email
             const query = { applicant: email };
             const result = await applicationsCollection.find(query).toArray();
