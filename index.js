@@ -26,27 +26,25 @@ const logger = (req, res, next) => {
     next();
 }
 
-// const verifyToken = (req, res, next) => {
-//     // we need cookies here
-//     const token = req?.cookies?.token;
+const verifyToken = (req, res, next) => {
+    // we need cookies here
+    const token = req?.cookies?.token;
 
-//     // check if token exists
-//     if (!token) {
-//         return res.status(401).send({ message: 'unauthorized access' });
-//     }
+    // check if token exists
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' });
+    }
 
-//     // verify token
-//     jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
-//         if (err) {
-//             return res.status(403).send({ message: 'forbidden access' });
-//         }
-//         console.log(decoded);
-//         // req.decoded = decoded;
-//     })
-
-
-//     next();
-// }
+    // verify token
+    jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'forbidden access' });
+        }
+        // console.log(decoded); // {email: '...', iat: ..., exp: ...}
+        req.decoded = decoded; // we need this to match API request email with token email
+        next();
+    })
+}
 
 
 
@@ -146,11 +144,14 @@ async function run() {
 
         // applications api
 
-        app.get('/applications', logger, async (req, res) => {
+        app.get('/applications', verifyToken, async (req, res) => {
             // console.log("hit the api");
             const email = req.query.email;
 
             // console.log('inside applications', req.cookies);
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
 
             // filter applications in db by email
             const query = { applicant: email };
