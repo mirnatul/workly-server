@@ -20,10 +20,9 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// for varify
-var admin = require("firebase-admin");
-
-var serviceAccount = require("./firebase-admin-key.json");
+// for varify (can place the require top)
+const admin = require("firebase-admin");
+const serviceAccount = require("./firebase-admin-key.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -58,15 +57,25 @@ const verifyToken = (req, res, next) => {
 
 const verifyFirebaseToken = async (req, res, next) => {
     const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).send({ message: 'unauthorized access' });
+    }
+
     const token = authHeader.split(' ')[1];
+
     if (!token) {
         return res.status(401).send({ message: 'unauthorized access' });
     }
     // console.log('fb token', token);
-    const userInfo = await admin.auth().verifyIdToken(token);
-    console.log('inside the token', userInfo)
-    req.tokenEmail = userInfo.email;
-    next();
+    try {
+        const decoded = await admin.auth().verifyIdToken(token);
+        // console.log('inside the token', decoded)
+        req.decoded = decoded
+        next();
+    }
+    catch (error) {
+        console.error('Error verifying Firebase token:', error);
+    }
 }
 
 
@@ -131,8 +140,12 @@ async function run() {
         //     res.send(result);
         // });
 
-        app.get('/jobs/applications', async (req, res) => {
+        app.get('/jobs/applications', verifyFirebaseToken, async (req, res) => {
             const email = req.query.email;
+
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
 
             const query = { hr_email: email };
             const jobs = await jobsCollection.find(query).toArray();
@@ -172,13 +185,13 @@ async function run() {
             const email = req.query.email;
 
             // console.log('inside applications', req.cookies);
-            // if (email !== req.decoded.email) {
-            //     return res.status(403).send({ message: 'forbidden access' });
-            // }
-
-            if (req.tokenEmail !== req.decoded.email) {
+            if (email !== req.decoded.email) {
                 return res.status(403).send({ message: 'forbidden access' });
             }
+
+            // if (req.tokenEmail !== req.decoded.email) {
+            //     return res.status(403).send({ message: 'forbidden access' });
+            // }
 
             // filter applications in db by email
             const query = { applicant: email };
