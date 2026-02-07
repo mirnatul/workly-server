@@ -20,6 +20,16 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// for varify
+var admin = require("firebase-admin");
+
+var serviceAccount = require("./firebase-admin-key.json");
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+
 
 const logger = (req, res, next) => {
     console.log('inside the logger middleware');
@@ -44,6 +54,19 @@ const verifyToken = (req, res, next) => {
         req.decoded = decoded; // we need this to match API request email with token email
         next();
     })
+}
+
+const verifyFirebaseToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' });
+    }
+    // console.log('fb token', token);
+    const userInfo = await admin.auth().verifyIdToken(token);
+    console.log('inside the token', userInfo)
+    req.tokenEmail = userInfo.email;
+    next();
 }
 
 
@@ -144,12 +167,16 @@ async function run() {
 
         // applications api
 
-        app.get('/applications', verifyToken, async (req, res) => {
+        app.get('/applications', verifyFirebaseToken, verifyToken, async (req, res) => {
             // console.log("hit the api");
             const email = req.query.email;
 
             // console.log('inside applications', req.cookies);
-            if (email !== req.decoded.email) {
+            // if (email !== req.decoded.email) {
+            //     return res.status(403).send({ message: 'forbidden access' });
+            // }
+
+            if (req.tokenEmail !== req.decoded.email) {
                 return res.status(403).send({ message: 'forbidden access' });
             }
 
