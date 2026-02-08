@@ -56,6 +56,7 @@ const verifyToken = (req, res, next) => {
 }
 
 const verifyFirebaseToken = async (req, res, next) => {
+    // console.log("Hit verify firebase token middleware");
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).send({ message: 'unauthorized access' });
@@ -78,6 +79,14 @@ const verifyFirebaseToken = async (req, res, next) => {
     }
 }
 
+// email duplication check middleware
+const verifyTokenEmail = (req, res, next) => {
+    // console.log("Hit verify token email middleware");
+    if (req.query.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+    }
+    next();
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.dudbtcu.mongodb.net/?appName=Cluster0`;
@@ -140,12 +149,13 @@ async function run() {
         //     res.send(result);
         // });
 
-        app.get('/jobs/applications', verifyFirebaseToken, async (req, res) => {
+        app.get('/jobs/applications', verifyFirebaseToken, verifyTokenEmail, async (req, res) => {
             const email = req.query.email;
 
-            if (email !== req.decoded.email) {
-                return res.status(403).send({ message: 'forbidden access' });
-            }
+            // handled by middleware
+            // if (email !== req.decoded.email) {
+            //     return res.status(403).send({ message: 'forbidden access' });
+            // }
 
             const query = { hr_email: email };
             const jobs = await jobsCollection.find(query).toArray();
@@ -180,14 +190,15 @@ async function run() {
 
         // applications api
 
-        app.get('/applications', verifyFirebaseToken, verifyToken, async (req, res) => {
+        app.get('/applications', verifyFirebaseToken, verifyTokenEmail, async (req, res) => {
             // console.log("hit the api");
             const email = req.query.email;
+            // console.log("hit application");
 
             // console.log('inside applications', req.cookies);
-            if (email !== req.decoded.email) {
-                return res.status(403).send({ message: 'forbidden access' });
-            }
+            // if (email !== req.decoded.email) {
+            //     return res.status(403).send({ message: 'forbidden access' });
+            // }
 
             // if (req.tokenEmail !== req.decoded.email) {
             //     return res.status(403).send({ message: 'forbidden access' });
