@@ -14,7 +14,7 @@ require('dotenv').config();
 
 // middleware
 app.use(cors({
-    origin: ['http://localhost:5173'], // allow requests from this origin
+    origin: ['http://localhost:5173', 'https://workly-a-job-portal.web.app'], // allow requests from this origin
     credentials: true, // allow cookies to be sent
 }));
 app.use(express.json());
@@ -22,7 +22,9 @@ app.use(cookieParser());
 
 // for varify (can place the require top)
 const admin = require("firebase-admin");
-const serviceAccount = require("./firebase-admin-key.json");
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8');
+const serviceAccount = JSON.parse(decoded);
+// const serviceAccount = require("./firebase-admin-key.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
